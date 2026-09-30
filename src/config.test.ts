@@ -11,7 +11,6 @@ import {
   type ConfigType,
 } from "./config";
 
-// Each config file owns its schema, NestJS-style: schema and factory live together.
 const appConfig = defineConfig(
   z.object({
     port: z.coerce.number().default(3000),

@@ -2,11 +2,11 @@
 
 Typed, schema-validated configuration for [Rhythm](https://github.com/rhythmjs/rhythm), the Bun-native
 backend framework: a `configModule` built as a real Rhythm module, loading default-exported config factories where **each file owns its own
-schema** — validated by any [standard-schema](https://github.com/standard-schema/standard-schema)
-library (zod, valibot, arktype) — and served through a `ConfigService` with compile-time-checked
+schema**, validated by any [standard-schema](https://github.com/standard-schema/standard-schema)
+library (zod, valibot, arktype), and served through a `ConfigService` with compile-time-checked
 dot-path access.
 
-There is no dotenv machinery here — config factories read the environment themselves (`Bun.env` /
+There is no dotenv machinery here; config factories read the environment themselves (`Bun.env` /
 `process.env`), and Bun loads `.env` files natively.
 
 ## Install
@@ -21,7 +21,7 @@ Config files are default-exported factories; the schema lives in the same file, 
 validates:
 
 ```ts
-// config/app.config.ts — the factory reads the env directly; the schema owns coercion and defaults.
+// config/app.config.ts: the factory reads the env directly; the schema owns coercion and defaults.
 import { defineConfig } from "@rhythmjs/config";
 import { z } from "zod";
 
@@ -48,7 +48,7 @@ export default registerAs(
 ```
 
 All configs are collected in **one centralized place**, which exports both the list and its context
-type — the single source of truth the rest of the app imports from:
+type, the single source of truth the rest of the app imports from:
 
 ```ts
 // config/index.ts
@@ -72,7 +72,7 @@ const app = new Rhythm().register(configModule.forRoot(...configs), ({ configSer
   configService,
 }));
 
-// anywhere downstream — every path and return type checked at compile time:
+// anywhere downstream, every path and return type checked at compile time:
 ctx.configService.get("database.port"); // number
 ctx.configService.get("database"); // { host: string; port: number }
 ctx.configService.getOrThrow("database.host");
@@ -82,7 +82,7 @@ ctx.configService.value; // the whole validated tree
 ## Using `configService` in child modules
 
 The core app injects what it exports into everything registered after it. A child module makes that
-injection type-safe by declaring the exported `AppConfigContext` as its input — no hand-written
+injection type-safe by declaring the exported `AppConfigContext` as its input, with no hand-written
 types, everything derives from `config/index.ts`:
 
 ```ts
@@ -91,7 +91,7 @@ import { configs, type AppConfigContext } from "./config";
 
 // child module: states what it needs from the parent context
 const apiModule = new Rhythm<AppConfigContext>().use(async (ctx, next) => {
-  ctx.configService.get("database.port"); // number — full dot-path safety
+  ctx.configService.get("database.port"); // number, full dot-path safety
   await next();
 });
 
@@ -106,35 +106,35 @@ typed, and `register(apiModule)` is a **compile error** if the parent hasn't exp
 
 ## Behavior
 
-- **Loading** — the factories passed to `forRoot` run once at `setup()`, in order; sync or async. Plain and
+- **Loading**: the factories passed to `forRoot` run once at `setup()`, in order; sync or async. Plain and
   `defineConfig` factories deep-merge at the root, `registerAs(token, …)` nests under `token`, later
   factories win on conflicts.
-- **Validation** — each factory's output is validated against its own schema. At boot the module runs
+- **Validation**: each factory's output is validated against its own schema. At boot the module runs
   every factory and **aggregates all failures into one `ConfigError`** (`issues: { message, path? }[]`,
   namespaced factories get token-prefixed paths like `database.port`), so a bad deploy dies loudly at
-  startup listing everything wrong — not just the first file. Coercion (`z.coerce.number()`) belongs
+  startup listing everything wrong, not just the first file. Coercion (`z.coerce.number()`) belongs
   to the schema, since env values are strings.
 - **Schema-free factories** are allowed (`() => ({...})` or `registerAs(token, factory)`); their types
   are inferred from the return type and nothing is validated. A factory can also self-validate with
-  `schema.parse(...)` inline — that works, but throws the raw library error on first failure instead
+  `schema.parse(...)` inline; that works, but throws the raw library error on first failure instead
   of aggregating.
-- **Lifecycle** — `forRoot` returns a real `Rhythm` module; the service is a lifecycle-managed
+- **Lifecycle**: `forRoot` returns a real `Rhythm` module; the service is a lifecycle-managed
   provider, and only what your `exportValue` picks leaves the module.
 
 ## API
 
-- `configModule.forRoot(...configs)` — the module; config factories passed directly as arguments.
-- `defineConfig(schema, factory)` — root-level config file: factory output validated by the colocated
+- `configModule.forRoot(...configs)`: the module; config factories passed directly as arguments.
+- `defineConfig(schema, factory)`: root-level config file; factory output validated by the colocated
   schema, typed as the schema output.
-- `registerAs(token, factory)` / `registerAs(token, schema, factory)` — namespaced config factory,
+- `registerAs(token, factory)` / `registerAs(token, schema, factory)`: namespaced config factory,
   optionally schema-validated.
-- `ConfigService<T>` — `get(path)`, `get(path, fallback)`, `getOrThrow(path)` (throws `ConfigError`),
+- `ConfigService<T>`: `get(path)`, `get(path, fallback)`, `getOrThrow(path)` (throws `ConfigError`),
   `value`. Paths are template-literal typed: a typo like `"database.prot"` is a compile error.
-- `createConfigService(value)` — build a service directly (useful in tests).
-- `ConfigType<typeof factory>` — the output type of one factory.
-- `ConfigContext<typeof configs>` — the context slice a child module should declare as its input to
+- `createConfigService(value)`: build a service directly (useful in tests).
+- `ConfigType<typeof factory>`: the output type of one factory.
+- `ConfigContext<typeof configs>`: the context slice a child module should declare as its input to
   consume `configService` type-safely (see above).
-- `ConfigError` — `Error` subclass carrying serialized `issues`.
+- `ConfigError`: `Error` subclass carrying serialized `issues`.
 
 All types (`ConfigService`, `ConfigFactory`, `ConfigType`, `ConfigPath`, `ConfigValue`,
 `MergedConfig`, …) also ship type-only from `@rhythmjs/config/types`, mirroring
@@ -144,7 +144,7 @@ All types (`ConfigService`, `ConfigFactory`, `ConfigType`, `ConfigPath`, `Config
 
 ```sh
 bun install
-bun test           # bun test runner
-bun run typecheck  # tsc --noEmit
-bun run build      # bun build + tsc declarations
+bun test # bun test runner
+bun run typecheck # tsc --noEmit
+bun run build # bun build + tsc declarations
 ```
