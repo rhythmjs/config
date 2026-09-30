@@ -8,7 +8,7 @@
         "@standard-schema/spec": "^1.0.0",
       },
       "devDependencies": {
-        "@rhythmjs/rhythm": "^0.0.9",
+        "@rhythmjs/rhythm": "^0.0.11",
         "@types/bun": "^1.2.0",
         "@types/node": "^26.6.3",
         "oxlint": "^1.0.0",
@@ -17,7 +17,7 @@
         "zod": "^4.1.0",
       },
       "peerDependencies": {
-        "@rhythmjs/rhythm": "^0.0.9",
+        "@rhythmjs/rhythm": "^0.0.11",
       },
     },
   },
@@ -60,7 +60,7 @@
 
     "@oxlint/binding-win32-x64-msvc": ["@oxlint/binding-win32-x64-msvc@1.86.0", "", { "os": "win32", "cpu": "x64" }, "sha512-az4dzifCRzES1crwu6pDFXzJTIanrdxXFL9TbiJWrx9LKcuacbR83aPvxDA1LKLNswi/RoqitC7Afcflhu3zBQ=="],
 
-    "@rhythmjs/rhythm": ["@rhythmjs/rhythm@0.0.9", "", {}, "sha512-cWAUIIfdj6rPekHvKF91G1OQVUv4jnW69FdVdwZlzSUDuf7ac5ZZUfJTeAg1k81mikMYCEclg+MXxmUEADyJMg=="],
+    "@rhythmjs/rhythm": ["@rhythmjs/rhythm@0.0.11", "", {}, "sha512-+e3eQSsh/3wRGiF9sqtO6rkSa75eH8aDumgfwr2mAWdxy7s/14ns8Fx9uIT8AzXWKYTUsqBY2ITkw4YS3sENDg=="],
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 
