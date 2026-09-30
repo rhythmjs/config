@@ -1,14 +1,13 @@
 # @rhythmjs/config
 
-NestJS-style configuration for [Rhythm](https://github.com/rhythmjs/rhythm): a `configModule` built as
-a real Rhythm module, loading default-exported config factories where **each file owns its own
+Typed, schema-validated configuration for [Rhythm](https://github.com/rhythmjs/rhythm), the Bun-native
+backend framework: a `configModule` built as a real Rhythm module, loading default-exported config factories where **each file owns its own
 schema** — validated by any [standard-schema](https://github.com/standard-schema/standard-schema)
 library (zod, valibot, arktype) — and served through a `ConfigService` with compile-time-checked
 dot-path access.
 
-There is no dotenv machinery here — config factories read the runtime's own environment
-(`process.env` on Node, `Bun.env` on Bun, `Deno.env` on Deno, bindings on Workers), and runtimes load
-`.env` files natively (`node --env-file`, Bun auto-load, `deno --env-file`).
+There is no dotenv machinery here — config factories read the environment themselves (`Bun.env` /
+`process.env`), and Bun loads `.env` files natively.
 
 ## Install
 
@@ -22,8 +21,7 @@ Config files are default-exported factories; the schema lives in the same file, 
 validates:
 
 ```ts
-// config/app.config.ts — Node/Bun: process.env; Bun.env, Deno.env.get(), or
-// Workers bindings work the same way, your factory decides.
+// config/app.config.ts — the factory reads the env directly; the schema owns coercion and defaults.
 import { defineConfig } from "@rhythmjs/config";
 import { z } from "zod";
 
@@ -133,7 +131,7 @@ typed, and `register(apiModule)` is a **compile error** if the parent hasn't exp
 - `ConfigService<T>` — `get(path)`, `get(path, fallback)`, `getOrThrow(path)` (throws `ConfigError`),
   `value`. Paths are template-literal typed: a typo like `"database.prot"` is a compile error.
 - `createConfigService(value)` — build a service directly (useful in tests).
-- `ConfigType<typeof factory>` — the output type of one factory, NestJS-style.
+- `ConfigType<typeof factory>` — the output type of one factory.
 - `ConfigContext<typeof configs>` — the context slice a child module should declare as its input to
   consume `configService` type-safely (see above).
 - `ConfigError` — `Error` subclass carrying serialized `issues`.
