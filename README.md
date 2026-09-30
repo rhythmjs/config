@@ -13,7 +13,7 @@ There is no dotenv machinery here — config factories read the runtime's own en
 ## Install
 
 ```sh
-pnpm add @rhythmjs/config @rhythmjs/rhythm zod
+bun add @rhythmjs/config @rhythmjs/rhythm zod
 ```
 
 ## Usage
@@ -145,8 +145,8 @@ All types (`ConfigService`, `ConfigFactory`, `ConfigType`, `ConfigPath`, `Config
 ## Development
 
 ```sh
-pnpm install
-pnpm test       # vp test
-pnpm typecheck  # tsc --noEmit
-pnpm build      # vp pack
+bun install
+bun test           # bun test runner
+bun run typecheck  # tsc --noEmit
+bun run build      # bun build + tsc declarations
 ```
