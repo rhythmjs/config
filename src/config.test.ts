@@ -1,7 +1,15 @@
 import { describe, expect, test } from "vite-plus/test";
 import { Rhythm } from "@rhythmjs/rhythm";
 import { z } from "zod";
-import { ConfigError, ConfigModule, createConfigService, defineConfig, registerAs, type ConfigType } from "./config";
+import {
+  ConfigError,
+  configModule,
+  createConfigService,
+  defineConfig,
+  registerAs,
+  type ConfigContext,
+  type ConfigType,
+} from "./config";
 
 // Each config file owns its schema, NestJS-style: schema and factory live together.
 const appConfig = defineConfig(
@@ -30,9 +38,9 @@ const withEnv = async (vars: Record<string, string>, run: () => Promise<void>) =
   }
 };
 
-describe("ConfigModule.forRoot", () => {
+describe("configModule.forRoot", () => {
   test("merges self-validating factories and exports the service via register", async () => {
-    const app = new Rhythm().register(ConfigModule.forRoot({ load: [appConfig, databaseConfig] }), (m) => ({
+    const app = new Rhythm().register(configModule.forRoot(appConfig, databaseConfig), (m) => ({
       configService: m.configService,
     }));
 
@@ -52,7 +60,7 @@ describe("ConfigModule.forRoot", () => {
 
   test("reads the environment through each file's own schema", async () => {
     await withEnv({ PORT: "8080", DATABASE_PORT: "5433" }, async () => {
-      const app = new Rhythm().register(ConfigModule.forRoot({ load: [appConfig, databaseConfig] }), (m) => ({
+      const app = new Rhythm().register(configModule.forRoot(appConfig, databaseConfig), (m) => ({
         configService: m.configService,
       }));
       await app.setup();
@@ -65,7 +73,7 @@ describe("ConfigModule.forRoot", () => {
 
   test("aggregates validation failures across files, namespaced paths included", async () => {
     await withEnv({ PORT: "not-a-port", DATABASE_PORT: "also-bad" }, async () => {
-      const app = new Rhythm().register(ConfigModule.forRoot({ load: [appConfig, databaseConfig] }), (m) => ({
+      const app = new Rhythm().register(configModule.forRoot(appConfig, databaseConfig), (m) => ({
         configService: m.configService,
       }));
 
@@ -84,7 +92,7 @@ describe("ConfigModule.forRoot", () => {
     const base = () => ({ server: { host: "0.0.0.0", port: 3000 } });
     const override = () => ({ server: { port: 8080 } });
 
-    const app = new Rhythm().register(ConfigModule.forRoot({ load: [base, override] }), (m) => ({
+    const app = new Rhythm().register(configModule.forRoot(base, override), (m) => ({
       configService: m.configService,
     }));
     await app.setup();
@@ -99,13 +107,33 @@ describe("ConfigModule.forRoot", () => {
       return { url: "https://config.internal" };
     });
 
-    const app = new Rhythm().register(ConfigModule.forRoot({ load: [remote] }), (m) => ({
+    const app = new Rhythm().register(configModule.forRoot(remote), (m) => ({
       configService: m.configService,
     }));
     await app.setup();
     const ctx = await app.run({});
 
     expect(ctx.configService.get("remote.url")).toBe("https://config.internal");
+  });
+
+  test("child modules consume configService type-safely via ConfigContext", async () => {
+    const load = [appConfig, databaseConfig] as const;
+    const seen: number[] = [];
+
+    const apiModule = new Rhythm<ConfigContext<typeof load>>().use(async (ctx, next) => {
+      const port: number = ctx.configService.get("database.port");
+      seen.push(port);
+      await next();
+    });
+
+    const app = new Rhythm()
+      .register(configModule.forRoot(...load), (m) => ({ configService: m.configService }))
+      .register(apiModule);
+
+    await app.setup();
+    await app.run({});
+
+    expect(seen).toEqual([5432]);
   });
 
   test("factories run once at setup, not per run", async () => {
@@ -115,7 +143,7 @@ describe("ConfigModule.forRoot", () => {
       return { calls };
     };
 
-    const app = new Rhythm().register(ConfigModule.forRoot({ load: [counting] }), (m) => ({
+    const app = new Rhythm().register(configModule.forRoot(counting), (m) => ({
       configService: m.configService,
     }));
     await app.setup();

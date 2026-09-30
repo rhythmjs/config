@@ -1,6 +1,6 @@
 # @rhythmjs/config
 
-NestJS-style configuration for [Rhythm](https://github.com/rhythmjs/rhythm): a `ConfigModule` built as
+NestJS-style configuration for [Rhythm](https://github.com/rhythmjs/rhythm): a `configModule` built as
 a real Rhythm module, loading default-exported config factories where **each file owns its own
 schema** — validated by any [standard-schema](https://github.com/standard-schema/standard-schema)
 library (zod, valibot, arktype) — and served through a `ConfigService` with compile-time-checked
@@ -49,16 +49,28 @@ export default registerAs(
 );
 ```
 
-Register the module at the top level; `register`'s second argument exports the service into the app
-context:
+All configs are collected in **one centralized place**, which exports both the list and its context
+type — the single source of truth the rest of the app imports from:
+
+```ts
+// config/index.ts
+import type { ConfigContext } from "@rhythmjs/config";
+import appConfig from "./app.config";
+import databaseConfig from "./database.config";
+
+export const configs = [appConfig, databaseConfig] as const;
+export type AppConfigContext = ConfigContext<typeof configs>;
+```
+
+Register the module at the top level, passing the configs directly; `register`'s second argument
+exports the service into the app context:
 
 ```ts
 import { Rhythm } from "@rhythmjs/rhythm";
-import { ConfigModule } from "@rhythmjs/config";
-import appConfig from "./config/app.config";
-import databaseConfig from "./config/database.config";
+import { configModule } from "@rhythmjs/config";
+import { configs } from "./config";
 
-const app = new Rhythm().register(ConfigModule.forRoot({ load: [appConfig, databaseConfig] }), ({ configService }) => ({
+const app = new Rhythm().register(configModule.forRoot(...configs), ({ configService }) => ({
   configService,
 }));
 
@@ -69,9 +81,34 @@ ctx.configService.getOrThrow("database.host");
 ctx.configService.value; // the whole validated tree
 ```
 
+## Using `configService` in child modules
+
+The core app injects what it exports into everything registered after it. A child module makes that
+injection type-safe by declaring the exported `AppConfigContext` as its input — no hand-written
+types, everything derives from `config/index.ts`:
+
+```ts
+import { Rhythm } from "@rhythmjs/rhythm";
+import { configs, type AppConfigContext } from "./config";
+
+// child module: states what it needs from the parent context
+const apiModule = new Rhythm<AppConfigContext>().use(async (ctx, next) => {
+  ctx.configService.get("database.port"); // number — full dot-path safety
+  await next();
+});
+
+const app = new Rhythm()
+  .register(configModule.forRoot(...configs), (m) => ({ configService: m.configService }))
+  .register(apiModule); // compiles only because the parent context provides AppConfigContext
+```
+
+The kernel enforces the contract both ways: inside `apiModule` every `configService` access is fully
+typed, and `register(apiModule)` is a **compile error** if the parent hasn't exported a matching
+`configService` first (e.g. the `configModule` registration is missing or ordered after it).
+
 ## Behavior
 
-- **Loading** — `load` factories run once at `setup()`, in order; sync or async. Plain and
+- **Loading** — the factories passed to `forRoot` run once at `setup()`, in order; sync or async. Plain and
   `defineConfig` factories deep-merge at the root, `registerAs(token, …)` nests under `token`, later
   factories win on conflicts.
 - **Validation** — each factory's output is validated against its own schema. At boot the module runs
@@ -88,7 +125,7 @@ ctx.configService.value; // the whole validated tree
 
 ## API
 
-- `ConfigModule.forRoot({ load })` — the module.
+- `configModule.forRoot(...configs)` — the module; config factories passed directly as arguments.
 - `defineConfig(schema, factory)` — root-level config file: factory output validated by the colocated
   schema, typed as the schema output.
 - `registerAs(token, factory)` / `registerAs(token, schema, factory)` — namespaced config factory,
@@ -97,6 +134,8 @@ ctx.configService.value; // the whole validated tree
   `value`. Paths are template-literal typed: a typo like `"database.prot"` is a compile error.
 - `createConfigService(value)` — build a service directly (useful in tests).
 - `ConfigType<typeof factory>` — the output type of one factory, NestJS-style.
+- `ConfigContext<typeof configs>` — the context slice a child module should declare as its input to
+  consume `configService` type-safely (see above).
 - `ConfigError` — `Error` subclass carrying serialized `issues`.
 
 All types (`ConfigService`, `ConfigFactory`, `ConfigType`, `ConfigPath`, `ConfigValue`,

@@ -1,18 +1,11 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { Rhythm } from "@rhythmjs/rhythm";
-import type {
-  ConfigFactory,
-  ConfigIssue,
-  ConfigModuleOptions,
-  ConfigService,
-  MergedConfig,
-  NamespacedConfigFactory,
-} from "./types";
+import type { ConfigFactory, ConfigIssue, ConfigService, MergedConfig, NamespacedConfigFactory } from "./types";
 
 export type {
+  ConfigContext,
   ConfigFactory,
   ConfigIssue,
-  ConfigModuleOptions,
   ConfigPath,
   ConfigService,
   ConfigType,
@@ -126,12 +119,12 @@ function deepMerge(target: Record<string, unknown>, source: Record<string, unkno
   return out;
 }
 
-export const ConfigModule = {
-  forRoot<const TLoad extends readonly ConfigFactory[]>(options: ConfigModuleOptions<TLoad>) {
+export const configModule = {
+  forRoot<const TLoad extends readonly ConfigFactory[]>(...configs: TLoad) {
     const factory = async (): Promise<{ configService: ConfigService<MergedConfig<TLoad>> }> => {
       let merged: Record<string, unknown> = {};
       const issues: ConfigIssue[] = [];
-      for (const load of options.load) {
+      for (const load of configs) {
         let output: object;
         try {
           output = await Promise.resolve(load());

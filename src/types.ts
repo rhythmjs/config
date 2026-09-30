@@ -61,6 +61,6 @@ export interface ConfigService<T extends object> {
   getOrThrow<P extends ConfigPath<T>>(path: P): NonNullable<ConfigValue<T, P>>;
 }
 
-export interface ConfigModuleOptions<TLoad extends readonly ConfigFactory[]> {
-  load: TLoad;
-}
+export type ConfigContext<TLoad extends readonly ConfigFactory[]> = {
+  configService: ConfigService<MergedConfig<TLoad>>;
+};
