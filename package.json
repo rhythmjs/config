@@ -1,6 +1,6 @@
 {
   "name": "@rhythmjs/config",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "NestJS-style configuration module for Rhythm: ConfigModule.forRoot with config factories, registerAs namespaces, and a schema-validated, dot-path-typed ConfigService.",
   "keywords": [
     "config",
