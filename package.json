@@ -51,7 +51,7 @@
     "@standard-schema/spec": "^1.0.0"
   },
   "devDependencies": {
-    "@rhythmjs/rhythm": "^0.0.14",
+    "@rhythmjs/rhythm": "^0.0.15",
     "@types/bun": "^1.2.0",
     "@types/node": "^26.6.3",
     "oxlint": "^1.0.0",
@@ -60,7 +60,7 @@
     "zod": "^4.1.0"
   },
   "peerDependencies": {
-    "@rhythmjs/rhythm": ">=0.0.14"
+    "@rhythmjs/rhythm": ">=0.0.15"
   },
   "engines": {
     "bun": ">=1.2.0"

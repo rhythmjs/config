@@ -120,14 +120,14 @@ function deepMerge(target: Record<string, unknown>, source: Record<string, unkno
 }
 
 export const configModule = {
-  forRoot<const TLoad extends readonly ConfigFactory[]>(...configs: TLoad) {
-    const factory = async (): Promise<{ configService: ConfigService<MergedConfig<TLoad>> }> => {
+  async forRoot<const TLoad extends readonly ConfigFactory[]>(...configs: TLoad) {
+    const load = async (): Promise<ConfigService<MergedConfig<TLoad>>> => {
       let merged: Record<string, unknown> = {};
       const issues: ConfigIssue[] = [];
-      for (const load of configs) {
+      for (const factory of configs) {
         let output: object;
         try {
-          output = await Promise.resolve(load());
+          output = await Promise.resolve(factory());
         } catch (error) {
           if (error instanceof ConfigError) {
             issues.push(...error.issues);
@@ -135,14 +135,19 @@ export const configModule = {
           }
           throw error;
         }
-        const namespace = (load as { namespace?: string }).namespace;
+        const namespace = (factory as { namespace?: string }).namespace;
         merged = deepMerge(merged, namespace === undefined ? { ...output } : { [namespace]: output });
       }
       if (issues.length > 0) throw new ConfigError(issues);
 
-      return { configService: createConfigService(merged as MergedConfig<TLoad>) };
+      return createConfigService(merged as MergedConfig<TLoad>);
     };
 
-    return new Rhythm({ type: "module", name: "config" }).provide(factory);
+    const module = new Rhythm<{}, { configService: ConfigService<MergedConfig<TLoad>> }>({
+      type: "module",
+      name: "config",
+    });
+    module.context.configService = await load();
+    return module;
   },
 };

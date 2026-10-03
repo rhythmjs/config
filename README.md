@@ -68,7 +68,7 @@ import { Rhythm } from "@rhythmjs/rhythm";
 import { configModule } from "@rhythmjs/config";
 import { configs } from "./config";
 
-const app = new Rhythm().register(configModule.forRoot(...configs), ({ configService }) => ({
+const app = new Rhythm().register(await configModule.forRoot(...configs), ({ configService }) => ({
   configService,
 }));
 
@@ -96,7 +96,7 @@ const apiModule = new Rhythm<AppConfigContext>().use(async (ctx, next) => {
 });
 
 const app = new Rhythm()
-  .register(configModule.forRoot(...configs), (m) => ({ configService: m.configService }))
+  .register(await configModule.forRoot(...configs), (m) => ({ configService: m.configService }))
   .register(apiModule); // compiles only because the parent context provides AppConfigContext
 ```
 
@@ -106,10 +106,10 @@ typed, and `register(apiModule)` is a **compile error** if the parent hasn't exp
 
 ## Behavior
 
-- **Loading**: the factories passed to `forRoot` run once at `setup()`, in order; sync or async. Plain and
+- **Loading**: the factories passed to `forRoot` run once when `forRoot` is awaited (at startup), in order; sync or async. Plain and
   `defineConfig` factories deep-merge at the root, `registerAs(token, …)` nests under `token`, later
   factories win on conflicts.
-- **Validation**: each factory's output is validated against its own schema. At boot the module runs
+- **Validation**: each factory's output is validated against its own schema. At startup `forRoot` runs
   every factory and **aggregates all failures into one `ConfigError`** (`issues: { message, path? }[]`,
   namespaced factories get token-prefixed paths like `database.port`), so a bad deploy dies loudly at
   startup listing everything wrong, not just the first file. Coercion (`z.coerce.number()`) belongs
@@ -118,12 +118,13 @@ typed, and `register(apiModule)` is a **compile error** if the parent hasn't exp
   are inferred from the return type and nothing is validated. A factory can also self-validate with
   `schema.parse(...)` inline; that works, but throws the raw library error on first failure instead
   of aggregating.
-- **Lifecycle**: `forRoot` returns a real `Rhythm` module; the service is a lifecycle-managed
-  provider, and only what your `exportValue` picks leaves the module.
+- **Lifecycle**: `forRoot` is async and resolves to a real `Rhythm` module whose `context.configService`
+  is already built; configuration errors reject the `forRoot` promise at startup. Only what you export via
+  `register`'s second argument leaves the module. There is nothing to close.
 
 ## API
 
-- `configModule.forRoot(...configs)`: the module; config factories passed directly as arguments.
+- `await configModule.forRoot(...configs)`: resolves to the module; config factories passed directly as arguments.
 - `defineConfig(schema, factory)`: root-level config file; factory output validated by the colocated
   schema, typed as the schema output.
 - `registerAs(token, factory)` / `registerAs(token, schema, factory)`: namespaced config factory,

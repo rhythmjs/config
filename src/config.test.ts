@@ -39,11 +39,10 @@ const withEnv = async (vars: Record<string, string>, run: () => Promise<void>) =
 
 describe("configModule.forRoot", () => {
   test("merges self-validating factories and exports the service via register", async () => {
-    const app = new Rhythm().register(configModule.forRoot(appConfig, databaseConfig), (m) => ({
+    const app = new Rhythm().register(await configModule.forRoot(appConfig, databaseConfig), (m) => ({
       configService: m.configService,
     }));
 
-    await app.setup();
     const ctx = await app.run({});
 
     expect(ctx.configService.value).toEqual({
@@ -59,10 +58,9 @@ describe("configModule.forRoot", () => {
 
   test("reads the environment through each file's own schema", async () => {
     await withEnv({ PORT: "8080", DATABASE_PORT: "5433" }, async () => {
-      const app = new Rhythm().register(configModule.forRoot(appConfig, databaseConfig), (m) => ({
+      const app = new Rhythm().register(await configModule.forRoot(appConfig, databaseConfig), (m) => ({
         configService: m.configService,
       }));
-      await app.setup();
       const ctx = await app.run({});
 
       expect(ctx.configService.get("port")).toBe(8080);
@@ -72,12 +70,8 @@ describe("configModule.forRoot", () => {
 
   test("aggregates validation failures across files, namespaced paths included", async () => {
     await withEnv({ PORT: "not-a-port", DATABASE_PORT: "also-bad" }, async () => {
-      const app = new Rhythm().register(configModule.forRoot(appConfig, databaseConfig), (m) => ({
-        configService: m.configService,
-      }));
-
-      const caught: unknown = await app
-        .setup()
+      const caught: unknown = await configModule
+        .forRoot(appConfig, databaseConfig)
         .then(() => undefined)
         .catch((e: unknown) => e);
       expect(caught).toBeInstanceOf(ConfigError);
@@ -91,10 +85,9 @@ describe("configModule.forRoot", () => {
     const base = () => ({ server: { host: "0.0.0.0", port: 3000 } });
     const override = () => ({ server: { port: 8080 } });
 
-    const app = new Rhythm().register(configModule.forRoot(base, override), (m) => ({
+    const app = new Rhythm().register(await configModule.forRoot(base, override), (m) => ({
       configService: m.configService,
     }));
-    await app.setup();
     const ctx = await app.run({});
 
     expect(ctx.configService.value.server).toEqual({ host: "0.0.0.0", port: 8080 });
@@ -106,10 +99,9 @@ describe("configModule.forRoot", () => {
       return { url: "https://config.internal" };
     });
 
-    const app = new Rhythm().register(configModule.forRoot(remote), (m) => ({
+    const app = new Rhythm().register(await configModule.forRoot(remote), (m) => ({
       configService: m.configService,
     }));
-    await app.setup();
     const ctx = await app.run({});
 
     expect(ctx.configService.get("remote.url")).toBe("https://config.internal");
@@ -126,26 +118,24 @@ describe("configModule.forRoot", () => {
     });
 
     const app = new Rhythm()
-      .register(configModule.forRoot(...load), (m) => ({ configService: m.configService }))
+      .register(await configModule.forRoot(...load), (m) => ({ configService: m.configService }))
       .register(apiModule);
 
-    await app.setup();
     await app.run({});
 
     expect(seen).toEqual([5432]);
   });
 
-  test("factories run once at setup, not per run", async () => {
+  test("factories run once at startup, not per run", async () => {
     let calls = 0;
     const counting = () => {
       calls += 1;
       return { calls };
     };
 
-    const app = new Rhythm().register(configModule.forRoot(counting), (m) => ({
+    const app = new Rhythm().register(await configModule.forRoot(counting), (m) => ({
       configService: m.configService,
     }));
-    await app.setup();
     await app.run({});
     await app.run({});
 
